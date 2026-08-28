@@ -1,0 +1,37 @@
+name: Feature request
+description: Propose a new read-only public evidence source or safer failure mode.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Evidence gap
+      description: Which public observation cannot the extension represent today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: source
+    attributes:
+      label: Proposed public source
+      description: Link official API documentation and a public example.
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure
+    attributes:
+      label: Fail-closed behavior
+      description: What should happen when the source is missing, paginated incompletely, or changes shape?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Project boundaries
+      options:
+        - label: The proposal is read-only and does not automate activity or infer unpublished thresholds.
+          required: true
+        - label: The proposal does not require bodies, secrets, or private names in the report.
+          required: true

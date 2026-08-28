@@ -1,0 +1,8 @@
+[tool.pip-tools.compile]
+allow-unsafe = true
+emit-index-url = false
+emit-options = true
+emit-trusted-host = false
+generate-hashes = true
+pip-args = "--only-binary=:all:"
+strip-extras = true

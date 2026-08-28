@@ -1,0 +1,5 @@
+pip==26.2.1
+jsonschema[format-nongpl]==4.19.2
+rpds-py==0.30.0
+ruff==0.16.5
+typing-extensions==4.16.0
