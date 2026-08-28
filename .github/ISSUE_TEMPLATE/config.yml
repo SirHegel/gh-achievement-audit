@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage questions
+    url: https://github.com/SirHegel/gh-achievement-audit/discussions/categories/q-a
+    about: Search or open an answerable Q&A discussion.
+  - name: Private vulnerability report
+    url: https://github.com/SirHegel/gh-achievement-audit/security/advisories/new
+    about: Report vulnerabilities privately; never post secrets in an issue.
