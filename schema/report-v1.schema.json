@@ -19,7 +19,7 @@
     "limitations"
   ],
   "properties": {
-    "schema_version": { "const": "1.0" },
+    "schema_version": { "const": "1.1" },
     "generated_at": { "type": "string", "format": "date-time" },
     "subject": { "$ref": "#/$defs/subject" },
     "complete": { "const": true },
@@ -108,7 +108,14 @@
     "answerEvidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["url", "repository", "owned_by_subject", "created_at", "upvotes"],
+      "required": [
+        "url",
+        "repository",
+        "owned_by_subject",
+        "self_accepted",
+        "created_at",
+        "upvotes"
+      ],
       "properties": {
         "url": { "$ref": "#/$defs/githubUrl" },
         "repository": {
@@ -117,6 +124,7 @@
           "maxLength": 201
         },
         "owned_by_subject": { "type": "boolean" },
+        "self_accepted": { "type": "boolean" },
         "created_at": { "type": "string", "format": "date-time" },
         "upvotes": { "type": "integer", "minimum": 0 }
       }
@@ -124,10 +132,16 @@
     "acceptedAnswers": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["public_total", "outside_personal_namespace_total", "evidence"],
+      "required": [
+        "public_total",
+        "outside_personal_namespace_total",
+        "self_accepted_total",
+        "evidence"
+      ],
       "properties": {
         "public_total": { "type": "integer", "minimum": 0 },
         "outside_personal_namespace_total": { "type": "integer", "minimum": 0 },
+        "self_accepted_total": { "type": "integer", "minimum": 0 },
         "evidence": {
           "type": "array",
           "uniqueItems": true,

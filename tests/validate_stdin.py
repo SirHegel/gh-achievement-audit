@@ -145,6 +145,9 @@ def semantic_errors(instance):
     outside_answers = sum(not item["owned_by_subject"] for item in answer_items)
     if answers["outside_personal_namespace_total"] != outside_answers:
         errors.append("accepted-answer namespace total disagrees with evidence")
+    self_accepted = sum(item["self_accepted"] is True for item in answer_items)
+    if answers["self_accepted_total"] != self_accepted:
+        errors.append("accepted-answer self-accepted total disagrees with evidence")
     answer_keys = []
     for item in answer_items:
         repository = item["repository"]

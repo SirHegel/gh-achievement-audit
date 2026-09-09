@@ -94,6 +94,7 @@ query(
         createdAt
         author { login }
         discussion {
+          author { login }
           repository { nameWithOwner url isPrivate owner { login } }
         }
       }
@@ -775,6 +776,7 @@ def _public_evidence(
 
     answer_evidence: List[Mapping[str, Any]] = []
     outside_namespace_answers = 0
+    self_accepted_answers = 0
     seen_answer_urls: set[Tuple[str, str]] = set()
     for node in nodes["answers"]:
         if node.get("isAnswer") is not True:
@@ -784,6 +786,20 @@ def _public_evidence(
         discussion = node.get("discussion")
         repository = (
             discussion.get("repository") if isinstance(discussion, dict) else None
+        )
+        discussion_author = (
+            discussion.get("author") if isinstance(discussion, dict) else None
+        )
+        discussion_author_login = (
+            discussion_author.get("login")
+            if isinstance(discussion_author, dict)
+            else None
+        )
+        # A deleted discussion author is rendered by GitHub as null; that is a
+        # legitimate state, not malformed evidence.
+        discussion_author_valid = discussion_author is None or (
+            isinstance(discussion_author_login, str)
+            and valid_login(discussion_author_login)
         )
         owner = repository.get("owner") if isinstance(repository, dict) else None
         owner_login = owner.get("login") if isinstance(owner, dict) else None
@@ -803,6 +819,7 @@ def _public_evidence(
             or not valid_login(owner_login)
             or not _repository_identity(name_with_owner, owner_login, repository_url)
             or not isinstance(private, bool)
+            or not discussion_author_valid
             or not isinstance(name_with_owner, str)
             or not _discussion_answer_url_matches(name_with_owner, url)
             or not _valid_datetime(created_at)
@@ -822,11 +839,18 @@ def _public_evidence(
         owned_by_subject = owner_login.casefold() == login_folded
         if not owned_by_subject:
             outside_namespace_answers += 1
+        self_accepted = (
+            isinstance(discussion_author_login, str)
+            and discussion_author_login.casefold() == login_folded
+        )
+        if self_accepted:
+            self_accepted_answers += 1
         answer_evidence.append(
             {
                 "url": url,
                 "repository": name_with_owner,
                 "owned_by_subject": owned_by_subject,
+                "self_accepted": self_accepted,
                 "created_at": created_at,
                 "upvotes": upvotes,
             }
@@ -884,6 +908,7 @@ def _public_evidence(
         "accepted_discussion_answers": {
             "public_total": len(answer_evidence),
             "outside_personal_namespace_total": outside_namespace_answers,
+            "self_accepted_total": self_accepted_answers,
             "evidence": answer_evidence,
         },
         "owned_public_nonfork_repositories": {
@@ -1022,6 +1047,11 @@ def validate_report_semantics(report: Mapping[str, Any]) -> None:
             == sum(not item["owned_by_subject"] for item in answer_items),
             "accepted-answer namespace total disagrees with evidence",
         )
+        require(
+            answers["self_accepted_total"]
+            == sum(item["self_accepted"] is True for item in answer_items),
+            "accepted-answer self-accepted total disagrees with evidence",
+        )
         answer_url_keys = set()
         for item in answer_items:
             repository = item["repository"]
@@ -1119,7 +1149,7 @@ def build_report(
     generated_at = generated_at.replace("+00:00", "Z")
 
     report = {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "generated_at": generated_at,
         "subject": {"login": canonical_login, "url": user["url"]},
         "complete": True,
@@ -1174,6 +1204,10 @@ def build_report(
                 "Outside the personal namespace means only that the repository owner "
                 "login differs; it does not prove organizational independence."
             ),
+            (
+                "Self-accepted means only that the discussion author login equals "
+                "the subject login; it is an event fact, not an eligibility ruling."
+            ),
             "Live GitHub data can change between paginated requests.",
             "Program signals are profile-program memberships, not GitHub Achievements.",
             (
@@ -1193,6 +1227,7 @@ def render_text(report: Mapping[str, Any]) -> str:
     pulls = evidence["merged_pull_requests"]
     answers = evidence["accepted_discussion_answers"]
     answer_outside = answers["outside_personal_namespace_total"]
+    answer_self = answers["self_accepted_total"]
     repositories = evidence["owned_public_nonfork_repositories"]
     top = repositories["top_by_stars"]
     top_text = "none"
@@ -1216,7 +1251,8 @@ def render_text(report: Mapping[str, Any]) -> str:
         ),
         (
             f"  Accepted Discussion answers: {answers['public_total']} "
-            f"({answer_outside} outside personal namespace)"
+            f"({answer_outside} outside personal namespace, "
+            f"{answer_self} self-accepted)"
         ),
         f"  Owned public non-fork repositories: {repositories['total']}",
         f"  Stars across those repositories: {repositories['total_stars']}",
