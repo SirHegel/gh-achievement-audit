@@ -77,6 +77,13 @@ A missing item in `visible_achievements` means only “not rendered publicly at 
 GitHub allows users to hide Achievements, so absence is not evidence that an event never
 happened.
 
+## Evidence log
+
+[`docs/evidence-log.md`](docs/evidence-log.md) records, with dates and public URLs,
+what the maintainer's profile rendered versus what the public event record contained at
+the same moment. It is the observational basis for keeping visible state and event counts
+separate.
+
 ## Sources
 
 - [GitHub profile reference](https://docs.github.com/en/account-and-profile/reference/profile-reference)
