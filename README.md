@@ -11,7 +11,8 @@ threshold into a claim that a badge was earned.
 
 - Server-rendered visible achievements, cross-checked against known detail endpoints.
 - Every visible merged pull request authored by the account, paginated by cursor and
-  reduced to public totals.
+  reduced to public totals, including how many the audited account merged itself
+  (`self_merged_total`).
 - Every accepted GitHub Discussions answer visible to the caller, with public evidence URLs
   but no comment bodies, and a `self_accepted` flag whenever the discussion author is the
   audited account.
@@ -59,8 +60,9 @@ gh achievement-audit SirHegel --json
 
 The JSON contract is published at
 [`schema/report-v1.schema.json`](schema/report-v1.schema.json); the current
-`schema_version` is `1.1`, which added `self_accepted` and `self_accepted_total` to the
-accepted-answer evidence. A successful command emits a
+`schema_version` is `1.2`: `1.1` added `self_accepted` and `self_accepted_total` to the
+accepted-answer evidence, and `1.2` added `self_merged_total` to the merged pull-request
+counts. A successful command emits a
 complete report and exits `0`. Usage, authentication, API, pagination, HTML, endpoint, or
 contract failures emit no partial report and exit `2`.
 
