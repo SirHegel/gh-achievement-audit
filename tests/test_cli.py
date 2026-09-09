@@ -79,6 +79,7 @@ class FakeGitHub:
                         {
                             "id": f"private-pull-{index}",
                             "author": {"login": "SirHegel"},
+                            "mergedBy": {"login": "SirHegel"},
                             "repository": {
                                 "isPrivate": True,
                                 "owner": {"login": "private-owner"},
@@ -98,6 +99,7 @@ class FakeGitHub:
                             {
                                 "id": "private-pull-100",
                                 "author": {"login": "SirHegel"},
+                                "mergedBy": {"login": "SirHegel"},
                                 "repository": {
                                     "isPrivate": True,
                                     "owner": {"login": "private-owner"},
@@ -111,6 +113,7 @@ class FakeGitHub:
                     {
                         "id": "pull-1",
                         "author": {"login": "SirHegel"},
+                        "mergedBy": {"login": "SirHegel"},
                         "repository": {
                             "isPrivate": False,
                             "owner": {"login": "SirHegel"},
@@ -119,12 +122,17 @@ class FakeGitHub:
                     {
                         "id": "pull-private",
                         "author": {"login": "SirHegel"},
+                        "mergedBy": {"login": "private-owner"},
                         "repository": {
                             "isPrivate": True,
                             "owner": {"login": "private-owner"},
                         },
                     },
                 ]
+                if self.mode == "ghost_merger":
+                    pull_nodes[0]["mergedBy"] = None
+                if self.mode == "bad_merger":
+                    pull_nodes[0]["mergedBy"] = {"login": "-not-valid-"}
                 user["pullRequests"] = connection(
                     pull_nodes, 3, has_next=True, end_cursor="pull-2"
                 )
@@ -144,6 +152,7 @@ class FakeGitHub:
                                     else "SirHegel"
                                 )
                             },
+                            "mergedBy": {"login": "encode-maintainer"},
                             "repository": {
                                 "isPrivate": False,
                                 "owner": {"login": "encode"},
@@ -323,6 +332,7 @@ class StaggeredGitHub:
                 {
                     "id": f"staggered-pull-{index}",
                     "author": {"login": "SirHegel"},
+                    "mergedBy": {"login": "SirHegel"},
                     "repository": {
                         "isPrivate": False,
                         "owner": {"login": "SirHegel"},
@@ -545,6 +555,10 @@ def semantic_mutations():
     ] = 2
     mutations["answer self-accepted total"] = answer_self_accepted
 
+    pull_self_merged = deepcopy(report())
+    pull_self_merged["public_evidence"]["merged_pull_requests"]["self_merged_total"] = 5
+    mutations["pull self-merged total"] = pull_self_merged
+
     achievement_identity = deepcopy(report())
     foreign_url = (
         "https://github.com/another-user?achievement=quickdraw&tab=achievements"
@@ -728,7 +742,7 @@ class ProfileTests(unittest.TestCase):
 class EvidenceTests(unittest.TestCase):
     def test_complete_report_separates_visible_state_and_events(self):
         result = report()
-        self.assertEqual(result["schema_version"], "1.1")
+        self.assertEqual(result["schema_version"], "1.2")
         self.assertEqual(result["generated_at"], "2026-08-28T10:40:00Z")
         self.assertEqual(
             [item["name"] for item in result["visible_achievements"]],
@@ -737,9 +751,23 @@ class EvidenceTests(unittest.TestCase):
         pulls = result["public_evidence"]["merged_pull_requests"]
         self.assertEqual(
             pulls,
-            {"public_total": 2, "outside_personal_namespace_total": 1},
+            {
+                "public_total": 2,
+                "outside_personal_namespace_total": 1,
+                "self_merged_total": 1,
+            },
         )
         self.assertNotIn("estimated_tier", json.dumps(result))
+
+    def test_self_merged_pull_requests_are_counted_separately(self):
+        pulls = report()["public_evidence"]["merged_pull_requests"]
+        self.assertEqual(pulls["self_merged_total"], 1)
+        self.assertEqual(pulls["outside_personal_namespace_total"], 1)
+
+    def test_deleted_merger_is_not_self_merged(self):
+        pulls = report(mode="ghost_merger")["public_evidence"]["merged_pull_requests"]
+        self.assertEqual(pulls["public_total"], 2)
+        self.assertEqual(pulls["self_merged_total"], 0)
 
     def test_private_events_are_not_disclosed(self):
         result = report()
@@ -880,6 +908,7 @@ class FailClosedTests(unittest.TestCase):
             "noncanonical_answer_url": "accepted-answer evidence",
             "duplicate_answer_url": "duplicated a public URL",
             "bad_discussion_author": "accepted-answer evidence",
+            "bad_merger": "pull-request evidence",
             "negative_stars": "repository evidence",
             "duplicate_repository": "repository evidence was duplicated",
             "negative_rate": "rate-limit metadata",
@@ -1129,7 +1158,10 @@ class ContractTests(unittest.TestCase):
     def test_text_renderer_labels_evidence_and_visibility(self):
         text = render_text(report())
         self.assertIn("Visible now: Quickdraw, YOLO", text)
-        self.assertIn("Merged pull requests: 2 (1 outside personal namespace)", text)
+        self.assertIn(
+            "Merged pull requests: 2 (1 outside personal namespace, 1 self-merged)",
+            text,
+        )
         self.assertIn(
             "Accepted Discussion answers: 2 "
             "(1 outside personal namespace, 1 self-accepted)",

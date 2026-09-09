@@ -19,7 +19,7 @@
     "limitations"
   ],
   "properties": {
-    "schema_version": { "const": "1.1" },
+    "schema_version": { "const": "1.2" },
     "generated_at": { "type": "string", "format": "date-time" },
     "subject": { "$ref": "#/$defs/subject" },
     "complete": { "const": true },
@@ -96,13 +96,18 @@
         "url": { "$ref": "#/$defs/githubUrl" }
       }
     },
-    "countPair": {
+    "pullRequestCounts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["public_total", "outside_personal_namespace_total"],
+      "required": [
+        "public_total",
+        "outside_personal_namespace_total",
+        "self_merged_total"
+      ],
       "properties": {
         "public_total": { "type": "integer", "minimum": 0 },
-        "outside_personal_namespace_total": { "type": "integer", "minimum": 0 }
+        "outside_personal_namespace_total": { "type": "integer", "minimum": 0 },
+        "self_merged_total": { "type": "integer", "minimum": 0 }
       }
     },
     "answerEvidence": {
@@ -189,7 +194,7 @@
         "advisory_database"
       ],
       "properties": {
-        "merged_pull_requests": { "$ref": "#/$defs/countPair" },
+        "merged_pull_requests": { "$ref": "#/$defs/pullRequestCounts" },
         "accepted_discussion_answers": { "$ref": "#/$defs/acceptedAnswers" },
         "owned_public_nonfork_repositories": { "$ref": "#/$defs/ownedRepositories" },
         "advisory_database": {
