@@ -167,6 +167,8 @@ def semantic_errors(instance):
     pulls = evidence["merged_pull_requests"]
     if pulls["outside_personal_namespace_total"] > pulls["public_total"]:
         errors.append("pull-request namespace count exceeds public total")
+    if pulls["self_merged_total"] > pulls["public_total"]:
+        errors.append("pull-request self-merged count exceeds public total")
 
     repositories = evidence["owned_public_nonfork_repositories"]
     top_repository = repositories["top_by_stars"]

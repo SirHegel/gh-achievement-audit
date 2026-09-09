@@ -76,6 +76,7 @@ query(
       nodes {
         id
         author { login }
+        mergedBy { login }
         repository { isPrivate owner { login } }
       }
     }
@@ -752,9 +753,19 @@ def _public_evidence(
     login_folded = login.casefold()
     public_pulls: List[Mapping[str, Any]] = []
     outside_namespace_pulls = 0
+    self_merged_pulls = 0
     for node in nodes["pulls"]:
         author = node.get("author")
         author_login = author.get("login") if isinstance(author, dict) else None
+        merged_by = node.get("mergedBy")
+        merged_by_login = (
+            merged_by.get("login") if isinstance(merged_by, dict) else None
+        )
+        # A deleted merging account is rendered by GitHub as null; that is a
+        # legitimate state, not malformed evidence.
+        merged_by_valid = merged_by is None or (
+            isinstance(merged_by_login, str) and valid_login(merged_by_login)
+        )
         repository = node.get("repository")
         owner = repository.get("owner") if isinstance(repository, dict) else None
         owner_login = owner.get("login") if isinstance(owner, dict) else None
@@ -766,6 +777,7 @@ def _public_evidence(
             or not isinstance(owner_login, str)
             or not valid_login(owner_login)
             or not isinstance(private, bool)
+            or not merged_by_valid
         ):
             raise AuditError("merged pull-request evidence was malformed")
         if private:
@@ -773,6 +785,11 @@ def _public_evidence(
         public_pulls.append(node)
         if owner_login.casefold() != login_folded:
             outside_namespace_pulls += 1
+        if (
+            isinstance(merged_by_login, str)
+            and merged_by_login.casefold() == login_folded
+        ):
+            self_merged_pulls += 1
 
     answer_evidence: List[Mapping[str, Any]] = []
     outside_namespace_answers = 0
@@ -904,6 +921,7 @@ def _public_evidence(
         "merged_pull_requests": {
             "public_total": len(public_pulls),
             "outside_personal_namespace_total": outside_namespace_pulls,
+            "self_merged_total": self_merged_pulls,
         },
         "accepted_discussion_answers": {
             "public_total": len(answer_evidence),
@@ -1035,6 +1053,10 @@ def validate_report_semantics(report: Mapping[str, Any]) -> None:
             pulls["outside_personal_namespace_total"] <= pulls["public_total"],
             "pull-request namespace count exceeds public total",
         )
+        require(
+            pulls["self_merged_total"] <= pulls["public_total"],
+            "pull-request self-merged count exceeds public total",
+        )
 
         answers = evidence["accepted_discussion_answers"]
         answer_items = answers["evidence"]
@@ -1149,7 +1171,7 @@ def build_report(
     generated_at = generated_at.replace("+00:00", "Z")
 
     report = {
-        "schema_version": "1.1",
+        "schema_version": "1.2",
         "generated_at": generated_at,
         "subject": {"login": canonical_login, "url": user["url"]},
         "complete": True,
@@ -1208,6 +1230,10 @@ def build_report(
                 "Self-accepted means only that the discussion author login equals "
                 "the subject login; it is an event fact, not an eligibility ruling."
             ),
+            (
+                "Self-merged means only that the merging login equals the subject "
+                "login; it is an event fact, not an eligibility ruling."
+            ),
             "Live GitHub data can change between paginated requests.",
             "Program signals are profile-program memberships, not GitHub Achievements.",
             (
@@ -1247,7 +1273,8 @@ def render_text(report: Mapping[str, Any]) -> str:
         "Public evidence (read-only):",
         (
             f"  Merged pull requests: {pulls['public_total']} "
-            f"({pulls['outside_personal_namespace_total']} outside personal namespace)"
+            f"({pulls['outside_personal_namespace_total']} outside personal namespace, "
+            f"{pulls['self_merged_total']} self-merged)"
         ),
         (
             f"  Accepted Discussion answers: {answers['public_total']} "
