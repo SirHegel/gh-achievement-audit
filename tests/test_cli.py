@@ -168,12 +168,13 @@ class FakeGitHub:
                         "createdAt": "2026-08-01T00:00:00Z",
                         "author": {"login": "SirHegel"},
                         "discussion": {
+                            "author": {"login": "SirHegel"},
                             "repository": {
                                 "nameWithOwner": "SirHegel/game",
                                 "url": "https://github.com/SirHegel/game",
                                 "isPrivate": False,
                                 "owner": {"login": "SirHegel"},
-                            }
+                            },
                         },
                     },
                     {
@@ -184,12 +185,13 @@ class FakeGitHub:
                         "createdAt": "2026-08-02T00:00:00Z",
                         "author": {"login": "SirHegel"},
                         "discussion": {
+                            "author": {"login": "poetry-user"},
                             "repository": {
                                 "nameWithOwner": "python-poetry/poetry",
                                 "url": "https://github.com/python-poetry/poetry",
                                 "isPrivate": False,
                                 "owner": {"login": "python-poetry"},
-                            }
+                            },
                         },
                     },
                     {
@@ -200,12 +202,13 @@ class FakeGitHub:
                         "createdAt": "2026-08-03T00:00:00Z",
                         "author": {"login": "SirHegel"},
                         "discussion": {
+                            "author": {"login": "private-owner"},
                             "repository": {
                                 "nameWithOwner": "private-owner/private",
                                 "url": "https://github.com/private-owner/private",
                                 "isPrivate": True,
                                 "owner": {"login": "private-owner"},
-                            }
+                            },
                         },
                     },
                 ]
@@ -232,6 +235,10 @@ class FakeGitHub:
             if self.mode == "duplicate_answer_url":
                 answer_nodes[1]["url"] = answer_nodes[0]["url"]
                 answer_nodes[1]["discussion"] = deepcopy(answer_nodes[0]["discussion"])
+            if self.mode == "ghost_discussion_author":
+                answer_nodes[0]["discussion"]["author"] = None
+            if self.mode == "bad_discussion_author":
+                answer_nodes[0]["discussion"]["author"] = {"login": "-not-valid-"}
             user["repositoryDiscussionComments"] = connection(answer_nodes, 3)
             if self.mode == "empty":
                 user["repositoryDiscussionComments"] = connection([], 0)
@@ -346,12 +353,13 @@ class StaggeredGitHub:
                     "createdAt": "2026-08-01T00:00:00Z",
                     "author": {"login": "SirHegel"},
                     "discussion": {
+                        "author": {"login": "SirHegel"},
                         "repository": {
                             "nameWithOwner": "SirHegel/game",
                             "url": "https://github.com/SirHegel/game",
                             "isPrivate": False,
                             "owner": {"login": "SirHegel"},
-                        }
+                        },
                     },
                 }
                 for index in range(offset, offset + size)
@@ -530,6 +538,12 @@ def semantic_mutations():
         "outside_personal_namespace_total"
     ] = 2
     mutations["answer identity"] = answer_identity
+
+    answer_self_accepted = deepcopy(report())
+    answer_self_accepted["public_evidence"]["accepted_discussion_answers"][
+        "self_accepted_total"
+    ] = 2
+    mutations["answer self-accepted total"] = answer_self_accepted
 
     achievement_identity = deepcopy(report())
     foreign_url = (
@@ -714,7 +728,7 @@ class ProfileTests(unittest.TestCase):
 class EvidenceTests(unittest.TestCase):
     def test_complete_report_separates_visible_state_and_events(self):
         result = report()
-        self.assertEqual(result["schema_version"], "1.0")
+        self.assertEqual(result["schema_version"], "1.1")
         self.assertEqual(result["generated_at"], "2026-08-28T10:40:00Z")
         self.assertEqual(
             [item["name"] for item in result["visible_achievements"]],
@@ -734,7 +748,26 @@ class EvidenceTests(unittest.TestCase):
         answers = result["public_evidence"]["accepted_discussion_answers"]
         self.assertEqual(answers["public_total"], 2)
         self.assertEqual(answers["outside_personal_namespace_total"], 1)
+        self.assertEqual(answers["self_accepted_total"], 1)
         self.assertEqual(len(answers["evidence"]), 2)
+
+    def test_self_accepted_answers_are_separated_from_namespace(self):
+        answers = report()["public_evidence"]["accepted_discussion_answers"]
+        self.assertEqual(answers["self_accepted_total"], 1)
+        by_repository = {item["repository"]: item for item in answers["evidence"]}
+        own = by_repository["SirHegel/game"]
+        foreign = by_repository["python-poetry/poetry"]
+        self.assertTrue(own["self_accepted"])
+        self.assertTrue(own["owned_by_subject"])
+        self.assertFalse(foreign["self_accepted"])
+        self.assertFalse(foreign["owned_by_subject"])
+
+    def test_deleted_discussion_author_is_not_self_accepted(self):
+        answers = report(mode="ghost_discussion_author")["public_evidence"][
+            "accepted_discussion_answers"
+        ]
+        self.assertEqual(answers["self_accepted_total"], 0)
+        self.assertFalse(any(item["self_accepted"] for item in answers["evidence"]))
 
     def test_owned_repositories_are_aggregated_and_sorted(self):
         repositories = report()["public_evidence"]["owned_public_nonfork_repositories"]
@@ -846,6 +879,7 @@ class FailClosedTests(unittest.TestCase):
             "repository_mismatch": "accepted-answer evidence",
             "noncanonical_answer_url": "accepted-answer evidence",
             "duplicate_answer_url": "duplicated a public URL",
+            "bad_discussion_author": "accepted-answer evidence",
             "negative_stars": "repository evidence",
             "duplicate_repository": "repository evidence was duplicated",
             "negative_rate": "rate-limit metadata",
@@ -1096,6 +1130,11 @@ class ContractTests(unittest.TestCase):
         text = render_text(report())
         self.assertIn("Visible now: Quickdraw, YOLO", text)
         self.assertIn("Merged pull requests: 2 (1 outside personal namespace)", text)
+        self.assertIn(
+            "Accepted Discussion answers: 2 "
+            "(1 outside personal namespace, 1 self-accepted)",
+            text,
+        )
         self.assertIn("no unpublished threshold is treated as fact", text)
 
     def test_main_json_writes_one_document(self):
