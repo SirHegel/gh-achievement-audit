@@ -77,7 +77,47 @@ two further separations that stay purely descriptive:
 
 Both are event facts, not thresholds, so they fit the existing contract.
 
-## Sources consulted for this entry
+## 2026-09-09 — co-author trailers on merged pull requests
+
+Four pull requests were merged into this repository on the same day, each with a single
+commit carrying a `Co-authored-by` trailer that names a bot account by its public
+`users.noreply.github.com` address. The purpose was to observe, without inventing any
+human participant, whether GitHub resolves such trailers to an account and whether a
+merged pull request with a resolved bot co-author is later reflected on the profile.
+
+| Pull request | Co-author trailer | Resolved by GraphQL `Commit.authors` |
+| --- | --- | --- |
+| <https://github.com/SirHegel/gh-achievement-audit/pull/6> | `claude[bot] <209825114+claude[bot]@users.noreply.github.com>` | `claude[bot]` |
+| <https://github.com/SirHegel/gh-achievement-audit/pull/7> | `Copilot <198982749+Copilot@users.noreply.github.com>` | `Copilot` |
+| <https://github.com/SirHegel/gh-achievement-audit/pull/8> | `github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>` | `github-actions[bot]` |
+| <https://github.com/SirHegel/gh-achievement-audit/pull/9> | `claude[bot] <209825114+claude[bot]@users.noreply.github.com>` | `claude[bot]` |
+
+Observations that hold regardless of what the profile does later:
+
+- All three bot identities resolve. `Commit.authors` lists them as co-authors with a
+  non-null `user`, on the pull-request commits and on the squash commits GitHub created on
+  `main`, so the trailers survived the squash merge.
+- A second trailer present on every commit, `Claude Opus 5 (1M context)
+  <noreply@anthropic.com>`, is added by the CLI agent as attribution. GitHub resolves that
+  address to the account `claude` (user id 81847, created 2009). Whether that account is
+  operated by Anthropic is not something this repository can determine; it is recorded
+  because it means the attribution trailer is also a resolved co-author from GitHub's
+  point of view.
+- Before this entry the account had no merged pull request with a co-author trailer.
+  Merged pull requests with at least one resolved co-author now number 4, all inside the
+  personal namespace, all merged by the subject (5 once the pull request adding this
+  entry is merged).
+
+What is still unknown and must not be inferred:
+
+- Whether a resolved *bot* co-author is treated the same as a resolved human co-author.
+- Whether pull requests merged by the subject into the subject's own repository are
+  treated the same as pull requests merged by someone else.
+
+Both questions are answered only by the profile, and only after GitHub's indexing delay.
+The profile at the time of writing still rendered Quickdraw and YOLO and nothing else.
+
+## Sources consulted for these entries
 
 Official:
 
