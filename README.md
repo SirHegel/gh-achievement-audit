@@ -116,6 +116,10 @@ when Dependabot or a maintainer recompiles the lock. CI independently checks tha
 and installs with both `--only-binary=:all:` and `--require-hashes`; update the input and
 lock together when intentionally changing a dependency.
 
+## Changelog
+
+See [`CHANGELOG.md`](CHANGELOG.md).
+
 ## License
 
 MIT
