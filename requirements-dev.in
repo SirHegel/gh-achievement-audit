@@ -1,4 +1,4 @@
-pip==26.2.1
+pip==26.2.2
 jsonschema[format-nongpl]==4.26.0
 rpds-py==0.30.0
 ruff==0.16.5
